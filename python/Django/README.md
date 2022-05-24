@@ -7,6 +7,8 @@
 1. 시작하기
 2. URLS
 3. VIEWS
+4. Model
+5. Admin
 ```
 
 ### 0. Django
@@ -145,11 +147,124 @@
 * HTTP요청을 수신하고 HTTP응답을 반환하는 함수 작성
 * Model을 통해 요청에 맞는 데이터에 접근
 
+### 4. Model
 
+* 웹 애플리케이션의 데이터를 구조화하고 조작하기 위한 도구
 
+* 저장된 데이터베이스의 구조(Schema)
 
+* Django는 모델을 통해 데이터에 접근하고 관리
 
+* ORM(Object Relational Mapping)사용 : 호환되지 않는 유형의 시스템(Django - SQL)간 데이터를 변환
 
+  ```
+  형태 : [Class Name].objects.[QuerySet API]
+  	Class Name : 모델에 작성된 클래스 이름
+  	objects : django모델에 데이터베이스 query작업이 제공되는 인터페이스(objects = default)
+  	QuerySet API : DB로 부터 전달받은 객체 목록
+  ```
+
+* Migrations : django가 model에 생긴 변화를 반영하는 방법
+
+  ```
+  makemigrations : 모델의 변경에 대한 새로운 설계도(migration)을 작성
+  migrate : 설계도(migration)을 DB에 반영
+  sqlmigrate : migration이 DB에 어떻게 반영되는지 SQL문으로 확인
+  showmigrations : 프로젝트 전체 migration상태를 확인
+  
+  $ python manage.py [mirgation조작어]
+  ```
+
+* Django Model Fields : https://docs.djangoproject.com/en/4.0/ref/models/fields/#field-types
+
+* CRUD : 예시를 위해 Class Name은 Article로 사용
+
+  ```
+  Create
+  article = Article()
+  article.title = '제목'
+  article.save()
+  ```
+
+  ```
+  Read
+  전체 조회 : Article.objects.all()							QuerySet반환
+  하나 조회 : Article.objects.get(pk=100)						모델과 동일한 형태의 객체 반환
+  	객체가 없는 경우 : DoesNotExist 예외 출력
+  	객체가 여러개인 경우 : MultipleObjectReturned 예외 출력
+  조건 조회 : Article.objects.filter(title='first')			QuerySet반환
+  	Django Filter : 
+  		https://docs.djangoproject.com/en/4.0/ref/models/querysets/#field-lookups-1
+  이외에도 exclude 등 다른것들도 있음
+  ```
+
+  ```
+  Update : 인스턴스 객체의 변수값을 변경 후 저장
+  article = Article.objects.get(pk=1)
+  article.title = '수정된 제목'
+  article.save()
+  ```
+
+  ```
+  Delete : 객체 및 QuerySet의 모든 행에 대해 SQL삭제 쿼리 실행
+  article2 = Article.objects.get(pk=1)
+  article.delete()
+  article = Article.objects.all()
+  article.delete()
+  ```
+
+* 예시
+
+  ```
+  ## app/model.py
+  from django.db import models
+  
+  class Article(models.Model):
+  	title = models.CharField(max_length=10)					# 짧은 문자열 필드
+  	content = models.TextField()							# 긴 문자열 필드
+  	create_at = models.DateTimeField(auto_now_add=True)		# 시간 저장(생성시 자동 저장)
+  	update_at = models.DateTimeField(auto_now=True)			# 시간 저장(변결시 자동 저장)
+  	
+  	def __str__(self):										# 각각의 object를 반환시
+  		return self.title									# 어떻게 표현할지를 정의
+  ```
+
+### 5. Admin
+
+* Django가 제공하는 관리자 페이지
+
+* Model Class를 admin.py에 등록하고 관리
+
+* 사용방법
+
+  ```
+  admin 계정 생성
+  $ python manage.py createsuperuser
+  ```
+
+  ```
+  모델 등록
+  ## app/admin.py
+  from django.contrib import admin
+  from .models import [Class Name]							# 모델에 정의한 클래스
+  
+  admin.site.register([Class Name])		# 모델에 __str__로 정의한 경우 원하는 형태로 출력
+  ```
+
+  ```
+  모델 커스텀
+  ## app/admin.py
+  from django.contrib import admin
+  from .models import [Class Name]
+  
+  class [Class Name]Admin(admin.ModelAdmin):			# 사실 클래스 이름은 마음대로 해도 됨
+  	list_display = ('pk','title','content',)
+  
+  admin.site.register([Class Name], [Class Name]Admin)
+  													# 파라미터로 모델, 위에서 정의한 클래스
+  ```
+
+* 기타 모델 옵션 : https://docs.djangoproject.com/en/4.0/ref/contrib/admin/#modeladmin-options
 
 
 
