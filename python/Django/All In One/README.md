@@ -6,6 +6,7 @@
 0. MVT Pattern
 1. Templates
 2. Templates 상속
+3. Form
 ```
 
 ### 0. MVT Pattern
@@ -84,6 +85,75 @@
    ```
 
    
+
+### 3. Form
+
+* Django의 주요 유효성 검사 도구
+
+* 데이터에 대한 HTML forms 생성
+
+* 클라이언트로부터 받은 데이터 수신 및 처리(유효성 검사, 입력 데이터 검증 결과 재출력, 유효한 데이터에 대한 요구동작 수행)
+
+  ```
+  form 작성
+  ## app/forms.py
+  from django import forms
+  from .models import Article
+  
+  class ArticleForm(forms.ModelForm):
+  	# 커스텀하는 부분(안쓰면 기본폼으로 나옴)
+  	title = forms.CharField(
+  		label='제목',
+  		widget=forms.TextInput(
+  			attrs={
+  				'class': 'my-title',
+  				'placeholder': 'Enter the title',
+  			}
+  		)
+  	)
+  	
+  	class Meta:
+  		model = Article
+  		fields = '__all__'
+  ```
+
+  ```
+  form 선언 & 응답
+  ## app/views.py
+  
+  def create(request):
+  	# method가 post로 호출되면 동작
+  	if request.method == 'POST':
+  		form = ArticleForm(request.POST)
+  		# 유효성 검사
+  		if form.is_valid():
+  			# Form의 결과를 해당 모델에 저장(modelForm)
+  			article = form.save()
+  			return redirect('articles:detail', article.pk)
+  	# method가 get으로 호출되면 동작		// 유효성 검사에서 탈락한건 그 form으로 재사용 됨
+  	else:
+  		form = ArticleForm()
+  	content = {
+  		'form': form,
+  	}
+  	return render(request, 'article/create.html', content)
+  ```
+
+  ```
+  form 생성
+  ## app/templates/article/new.html
+  ...
+  	<form action="{% url 'articles:create' %}" method="POST">
+  		{% csrf_token %}
+  		{{ form.as_p }} or {{ form.as_ul }} or etc...
+  		<input type="submit">
+  	</form>
+  ...
+  ```
+
+  
+
+  
 
 
 
