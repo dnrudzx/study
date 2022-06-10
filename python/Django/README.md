@@ -9,6 +9,8 @@
 3. VIEWS
 4. Model
 5. Admin
+6. Static files
+7. File upload
 ```
 
 ### 0. Django
@@ -265,6 +267,149 @@
   ```
 
 * 기타 모델 옵션 : https://docs.djangoproject.com/en/4.0/ref/contrib/admin/#modeladmin-options
+
+### 6. Static files
+
+* 정적 파일
+
+* 응답시 별도의 처리 업이 파일 내용을 그대로 보여주는 파일(img, js, css 등)
+
+* 모든 정적파일을 한곳에 저장 : 배포 환경에서 모든 정적 파일을 다른 웹 서버가 제공 가능
+
+  ```
+  ## settings.py
+  STATIC_ROOT = BASE_DIR / 'staticfiles'
+  ```
+
+  ```
+  $ python manage.py collectstatic
+  ```
+
+  ```
+  settings.py에서 설정한 경로에 css/fonts/img/js 등이 저장 됨
+  ```
+
+* 개발 단계에서 실제 정적 파일들이 저장 : 두 가지 경로를 탐색
+
+  ```
+  ## settings.py
+  STATIC_URL = '/static/'				# app/static/경로
+  									# static파일간의 충돌 방지 : app/static/app/fileName
+  
+  STATICFILES_DIRS = [				# 아래에 설정된 모든 경로를 공통적으로 탐색
+  	BASE_DIR / 'static',
+  ]
+  ```
+
+  ```
+  ## app/templates/app/???.html
+  {% load static %}
+  
+  <img src="{% static 'app/fileName.jpg' %}"			# STATIC_URL에서 가져온 경로
+  <img src="{% static 'images/fileName.jpg' %}"		# STATICFILES_DIRS에서 가져온 경로
+  ```
+
+### 7. File upload
+
+* 사용자가 웹에서 업로드하는 정적 파일
+
+* FileField를 상속받는 서브 클래스들(본문에서는 ImageField 사용)
+
+  * upload_to : 업로드 디렉토리와 파일 이름을 설정(문자열을 통해 경로 지정 / 함수 호출)
+
+    ```
+    ## models.py
+    def myModel_file_path(instance, filename):
+    	# MEDIA_ROOT/ 뒤에 설정한 경로로 업로드
+    	return f'user_{instance.user.pk}/{filename}'
+    	
+    class MyModel(models.Model):
+    	# 문자열을 통해 경로 지정 / %Y, %m, %d 등을 통해 시간 정보 넣기
+    	upload = models.FileField(upload_to='uploads/%Y/%m/%d')
+    	# 함수 호출을 사용해 경로 지정(반드시 instance, filename 인자 사용)
+    	upload = models.FileField(upload_to=myModel_file_path)
+    ```
+
+  * ImageField : 이미지 업로드에 사용 / 사용시 Pillow 라이브러리 필요
+
+* 세팅(ImageField 사용이니까 Pillow 설치)
+
+  ```
+  $ pip install Pillow
+  ```
+
+  ```
+  ## settings.py
+  # 사용자가 업로드 한 파일들을 보관할 절대 경로
+  # 반드시 STATIC_ROOT와 다른 경로로 지정
+  MEDIA_ROOT = BASE_DIR / 'media'
+  # 업로드 된 파일의 주소(URL)을 만들어 주는 역할(개발자 도구에 표시되는 주소)
+  MEDIA_URL = '/media/'
+  ```
+
+  ```
+  ## pjt/urls.py
+  from django.contrib import admin
+  from django.urls import path, include
+  from django.conf import settings										# 추가
+  from django.conf.urls.static import static								# 추가
+  
+  urlpatterns = [
+  	path('admin/', admin.site.urls),
+  	path('[보내고싶은 경로]/', inclued('[내가 만든 앱.urls]')),
+  ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)		# 추가
+  ```
+
+  ```
+  ## app/models.py
+  class MyModel(models.Model):
+  	title = models.CharField(max_length=20)
+  	content = models.TextField()
+  	# 이미지 업로드 / 경로 : MEDIA_ROOT/images
+  	# blank=True : 업로드 안하는 것을 허용(기본값 = False)
+  	image = models.ImageField(blank=True, upload_to='images/')
+  ```
+
+* Create
+
+  ```
+  ## app/views.py
+  def create(request):
+  	if request.method == 'POST':
+  		form = ArticleForm(request.POST, request.FILES)
+  		if form.is_valid():
+  			article.save()
+  			return redirect('articles:detail', article.pk)
+  	else:
+  		form = ArticleForm()
+  	context = {
+  		'form': form,
+  	}
+  	return render(request, 'articles/create.html', context)
+  ```
+
+  ```
+  ## app/templates/app/create.html
+  <form action="{% url 'articles:create' %}" method="POST" enctype="multipart/form-data">
+  	{% csrf_token %}
+  	{{ form.as_p }}
+  </form>
+  ```
+
+  * multipart/form-data : 파일/이미지 업로드시 반드시 사용
+
+* Read
+
+  ```
+  ## app/templates/app/detail.html
+  {% extends 'base.html' %}
+  {% block content %}
+  	<!-- Model.Field.url 을 통해 경로를 가져올 수 있다. -->
+  	<img src="{{ article.image.url }}" alt="{{ article.image }}">
+  {% endblock %}
+  ```
+
+  
 
 
 
